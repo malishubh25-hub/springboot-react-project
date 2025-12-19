@@ -34,7 +34,6 @@ public class UserLoginService implements IUserLoginService{
             responseBean.setMessage(Constants.MSG_INVALID_REQ);
             return responseBean;
         }
-		// Normalize inputs
         String incomingNumber = OmsUtils.trimToNull(userLoginBean.getCustomerNumber());
         String incomingEmail  = OmsUtils.normalizeEmail(userLoginBean.getCustomerEmail());
 		try {
