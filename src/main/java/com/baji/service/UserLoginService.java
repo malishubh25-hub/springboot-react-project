@@ -60,7 +60,6 @@ public class UserLoginService implements IUserLoginService{
 	                responseBean.setMessage(Constants.MSG_EMAIL_EXISTS);
 	                return responseBean;
 	            }
-	         // Both unique -> prepare entity and save
 	            UserLogin userEntity = mapBeanToEntity(userLoginBean);
 	            UserLogin saved = loginRepository.save(userEntity);
 	            
