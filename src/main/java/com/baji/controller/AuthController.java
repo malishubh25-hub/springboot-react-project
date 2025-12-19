@@ -40,18 +40,17 @@ public class AuthController {
 
     @PostMapping("/login")
     public ResponseEntity<String> login(@RequestBody com.baji.bean.JwtToken loginRequest) {
-        UserLogin user = loginRepository.findByCustomerEmail(loginRequest.g())
-                .orElseThrow(() -> new RuntimeException("User not found"));
+        UserLogin user = loginRepository.findByCustomerEmail(loginRequest.getUsername());
 
         if (!passwordEncoder.matches(loginRequest.getPassword(), user.getPassword())) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body("Invalid username or password");
         }  
-        java.util.Date expiry = jwtUtil.getExpirationDateFromToken(loginRequest.getto);
+        java.util.Date expiry = jwtUtil.getExpirationDateFromToken(loginRequest.getUsername());
 
         // Save token to DB      
         JwtToken jwtToken = new JwtToken();
-        jwtToken.setToken(token);
+        //jwtToken.setToken(token);
         jwtToken.setUsername(user.getCustomerEmail());
         jwtToken.setExpired(false);
         jwtToken.setRevoked(false);
@@ -59,9 +58,9 @@ public class AuthController {
         tokenRepo.save(jwtToken);
 
         Map<String, Object> response = new HashMap<>();
-        response.put("token", token);
+       // response.put("token", token);
         response.put("user", user);
         response.put("expiry", expiry);
-        return ResponseEntity.ok(response);
+        return null;
     }
 }

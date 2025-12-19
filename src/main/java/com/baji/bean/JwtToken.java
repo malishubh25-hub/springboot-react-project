@@ -45,5 +45,9 @@ public class JwtToken {
 		public void setExpiryDate(java.util.Date expiryDate) {
 			this.expiryDate = expiryDate;
 		}
+		public CharSequence getPassword() {
+			// TODO Auto-generated method stub
+			return null;
+		}
 
 }
