@@ -40,7 +40,6 @@ public class UserLoginService implements IUserLoginService{
 			 boolean numberExists = false;
 	         boolean emailExists  = false;
 
-	            // Prefer existsByXxx if implemented (more efficient)
 	            if (incomingNumber != null) {
 	                numberExists = loginRepository.existsByCustomerNumber(incomingNumber);
 	            }
