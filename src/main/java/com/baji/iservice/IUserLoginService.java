@@ -5,7 +5,7 @@ import com.baji.global.bean.CommonResponseBean;
 
 public interface IUserLoginService {
 
-	CommonResponseBean saveUserLogin(UserLoginBean userLoginBean);
+	CommonResponseBean saveUserLogin(UserLoginBean userLoginBean);;
 
 	CommonResponseBean userLogin(UserLoginBean userLoginBean);
 
