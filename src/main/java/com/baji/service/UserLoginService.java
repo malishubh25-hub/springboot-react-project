@@ -63,7 +63,6 @@ public class UserLoginService implements IUserLoginService{
 	            UserLogin userEntity = mapBeanToEntity(userLoginBean);
 	            UserLogin saved = loginRepository.save(userEntity);
 	            
-	         // hide password before returning
 	            if (saved != null) saved.setPassword(null);
 
 	            responseBean.setSuccess(true);
@@ -122,7 +121,8 @@ public class UserLoginService implements IUserLoginService{
 		try {
 			String email = userLoginBean.getCustomerEmail().trim().toLowerCase();
 	        String rawPassword = userLoginBean.getPassword();
-	     // Fetch user by email
+
+	        
 	        UserLogin userLogin = loginRepository.findByCustomerEmail(email);
 	        if (userLogin == null) {
 	            responseBean.setSuccess(false);
