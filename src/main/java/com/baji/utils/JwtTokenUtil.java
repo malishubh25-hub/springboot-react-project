@@ -1,5 +1,7 @@
 package com.baji.utils;
 
+import java.security.Key;
+import java.time.Duration;
 import java.util.Base64;
 import java.util.Date;
 import java.util.HashMap;
@@ -12,158 +14,135 @@ import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 
+import com.baji.bean.UserLoginBean;
+
 import io.jsonwebtoken.Claims;
-import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.security.Keys;
 
 @Component
 public class JwtTokenUtil {
-
 	private static final long serialVersionUID = 1L;
+	private static final String ALGORITHM = "AES";
+	public static final long JWT_TOKEN_VALIDITY = 5 * 60 * 60;
 
-    public static final long JWT_TOKEN_VALIDITY = 5 * 60 * 60;
-    private static final String AES_ALGORITHM = "AES";
+	@Value("${jwt.token.validity}")
+	private Duration jwtValidity;
 
-    @Value("${jwt.tokenValidityMs:86400000}")
-    private long tokenValidityMs; // default 24h
+	Key key = Keys.secretKeyFor(SignatureAlgorithm.HS256);
 
-    // HMAC key for signing JWTs
-    private final SecretKey hmacKey = Keys.secretKeyFor(SignatureAlgorithm.HS256);
-    public static String secret = "9ez/uqcQLFEeIG2KQy8pelosVDUB175poEoqpHh4YIg=";
-
-    
-    public String getUsernameFromToken(String token) {
-        return getClaimFromToken(token, Claims::getSubject);
-    }
-
-    public String getUserTypeFromToken(String token) {
-        Claims claims = Jwts.parserBuilder().setSigningKey(hmacKey).build().parseClaimsJws(token).getBody();
-        return (String) claims.get("userType");
-    }
-    
-    public boolean validateToken(String token) {
-        try {
-            Jwts.parserBuilder().setSigningKey(hmacKey).build().parseClaimsJws(token);
-            return true;
-        } catch (JwtException e) {
-            System.out.println("Invalid JWT: " + e.getMessage());
-            return false;
-        }
-    }
-    
-    public String getUserIdFromTokens(String token) {
-        Claims claims = Jwts.parserBuilder().setSigningKey(hmacKey).build().parseClaimsJws(token).getBody();
-        return (String) claims.get("userId");
-    }
-
-    public Date getExpirationDateFromToken(String token) {
-        return getClaimFromToken(token, Claims::getExpiration);
-    }
-    
-    public Date getExpiration(String token) {
-        return Jwts.parserBuilder().setSigningKey(hmacKey).build()
-                .parseClaimsJws(token).getBody().getExpiration();
-    }
-
-    public <T> T getClaimFromToken(String token, Function<Claims, T> claimsResolver) {
-        final Claims claims = getAllClaimsFromToken(token);
-        return claimsResolver.apply(claims);
-    }
-
-    public Claims getAllClaimsFromToken(String token) {
-        return Jwts.parserBuilder().setSigningKey(hmacKey).build().parseClaimsJws(token).getBody();
-    }
-
-    @SuppressWarnings("unused")
-	private Boolean isTokenExpired(String token) {
-        final Date expiration = getExpirationDateFromToken(token);
-        return expiration.before(new Date(0, 0, 0));
-    }
-
-    public String generateTokens(String loginId) {
-        Map<String, Object> claims = new HashMap<>();
-        claims.put("userId", loginId);
-
-        return Jwts.builder()
-                .setClaims(claims)
-                .setSubject(loginId)
-                .setIssuedAt(new Date(System.currentTimeMillis()))
-                .setExpiration(new Date(System.currentTimeMillis() + JWT_TOKEN_VALIDITY * 1000))
-                .signWith(hmacKey)
-                .compact();
-    }
-    
-    public Long fetchUserIdFromToken(String encryptedToken) {
-		Long id = null;
-		try {
-			encryptedToken = encryptedToken.substring(7);
-			String decrypt = decrypt(encryptedToken);
-			String  claims = getUsernameFromToken(decrypt);
-			if(claims != null) {
-				id = Long.parseLong(claims);
-			}
-		}catch(Exception e) {
-			e.printStackTrace();
-		}
-		return id;
+	public String getUsernameFromToken(String token) {
+		return getClaimFromToken(token, Claims::getSubject);
 	}
 
-    public String createToken(String subject, String claimKey, Object claimValue, long tokenValidityInMs, Boolean rememberMe) {
-        Map<String, Object> claims = new HashMap<>();
-        claims.put(claimKey, claimValue);
-        long now = (new Date()).getTime();
-        Date validity = new Date(now + tokenValidityInMs);
-        return Jwts.builder()
-                .setClaims(claims)
-                .setSubject(subject)
-                .setIssuedAt(new Date(System.currentTimeMillis()))
-                .setExpiration(validity)
-                .signWith(hmacKey)
-                .compact();
-    }
+	public String getUserTypeFromToken(String token) {
+		Claims claims = Jwts.parserBuilder().setSigningKey(key).build().parseClaimsJws(token).getBody();
+		return (String) claims.get("userType");
+	}
 
-    public Claims parseToken(String token) {
-        return Jwts.parserBuilder().setSigningKey(hmacKey).build().parseClaimsJws(token).getBody();
-    }
+	public Date getExpirationDateFromToken(String token) {
+		return getClaimFromToken(token, Claims::getExpiration);
+	}
 
-    public Claims getOtpJwtClaims(String token) {
-        Claims claims = null;
-        try {
-            claims = getAllClaimsFromToken(token);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        return claims;
-    }
+	public <T> T getClaimFromToken(String token, Function<Claims, T> claimsResolver) {
+		final Claims claims = getAllClaimsFromToken(token);
+		return claimsResolver.apply(claims);
+	}
 
-    // AES encryption method
-    public String encrypt(String data) throws Exception {
-        SecretKeySpec key = new SecretKeySpec(Base64.getDecoder().decode(secret), AES_ALGORITHM); // Decode the Base64 key
-        Cipher cipher = Cipher.getInstance(AES_ALGORITHM);
-        cipher.init(Cipher.ENCRYPT_MODE, key);
-        byte[] encryptedData = cipher.doFinal(data.getBytes());
-        return Base64.getEncoder().encodeToString(encryptedData); // Ensure data is Base64 encoded
-    }
+	public Claims getAllClaimsFromToken(String token) {
+		return Jwts.parserBuilder().setSigningKey(key).build().parseClaimsJws(token).getBody();
+	}
 
-    public String decrypt(String encryptedData) throws Exception {
-        SecretKeySpec key = new SecretKeySpec(Base64.getDecoder().decode(secret), AES_ALGORITHM); // Decode the Base64 key
-        Cipher cipher = Cipher.getInstance(AES_ALGORITHM);
-        cipher.init(Cipher.DECRYPT_MODE, key);
-        byte[] decodedData = Base64.getDecoder().decode(encryptedData);
-        byte[] decryptedData = cipher.doFinal(decodedData);
-        return new String(decryptedData);
-    }
+	private Boolean isTokenExpired(String token) {
+		final Date expiration = getExpirationDateFromToken(token);
+		return expiration.before(new Date());
+	}
 
-    public static String generateSecretKey() throws Exception {
-        KeyGenerator keyGen = KeyGenerator.getInstance(AES_ALGORITHM);
-        keyGen.init(256); // for AES-256
-        SecretKey secretKey = keyGen.generateKey();
-        return Base64.getEncoder().encodeToString(secretKey.getEncoded());
-         
-    }
+	public String getUserTypeFromTokens(String token) {
+		Claims claims = Jwts.parserBuilder().setSigningKey(key).build().parseClaimsJws(token).getBody();
+		return (String) claims.get("loginId");
+	}
 
+	public String generateToken(UserLoginBean userDetails) {
+		Map<String, Object> claims = new HashMap<>();
+		return Jwts.builder().setClaims(claims).setSubject(userDetails.getLoginId())
+				.setIssuedAt(new Date(System.currentTimeMillis()))
+				.setExpiration(new Date(System.currentTimeMillis() + JWT_TOKEN_VALIDITY * 1000)).signWith(key)
+				.compact();
+	}
+
+	public String generateTokens(String loginId, String userType) {
+		Map<String, Object> claims = new HashMap<>();
+		claims.put("userType", userType);
+		claims.put("loginId", loginId);
+
+		return Jwts.builder().setClaims(claims).setSubject(loginId).setIssuedAt(new Date(System.currentTimeMillis()))
+				.setExpiration(new Date(System.currentTimeMillis() + JWT_TOKEN_VALIDITY * 1000)).signWith(key)
+				.compact();
+	}
+
+	public String createToken(String subject, String claimKey, Object claimValue, long tokenValidityInMs,
+			Boolean rememberMe) {
+		Map<String, Object> claims = new HashMap<>();
+		claims.put(claimKey, claimValue);
+		long now = (new Date()).getTime();
+		Date validity = new Date(now + tokenValidityInMs);
+
+		return Jwts.builder().setClaims(claims).setSubject(subject).setIssuedAt(new Date(System.currentTimeMillis()))
+				.setExpiration(validity).signWith(key).compact();
+	}
+
+	public Claims parseToken(String token) {
+		return Jwts.parser().setSigningKey(key).parseClaimsJws(token).getBody();
+	}
+
+	public Boolean validateTokenForUser(String token, UserDetails userDetails) {
+		final String username = getUsernameFromToken(token);
+		return (username.equals(userDetails.getUsername()) && !isTokenExpired(token));
+	}
+
+	public Boolean validateToken(String token, UserLoginBean userDetails) {
+		final String username = getUsernameFromToken(token);
+		return (username.equals(userDetails.getLoginId()) && !isTokenExpired(token));
+	}
+
+	public Claims getOtpJwtClaims(String token) {
+		Claims claims = null;
+		try {
+			claims = getAllClaimsFromToken(token);
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		return claims;
+	}
+
+	public String encrypt(String data) throws Exception {
+		String secret = generateSecretKey();
+		SecretKeySpec key = new SecretKeySpec(secret.getBytes(), ALGORITHM);
+		Cipher cipher = Cipher.getInstance(ALGORITHM);
+		cipher.init(Cipher.ENCRYPT_MODE, key);
+		byte[] encryptedData = cipher.doFinal(data.getBytes());
+		return Base64.getEncoder().encodeToString(encryptedData);
+	}
+
+	public String decrypt(String encryptedData) throws Exception {
+		String secret = generateSecretKey();
+		SecretKeySpec key = new SecretKeySpec(secret.getBytes(), ALGORITHM);
+		Cipher cipher = Cipher.getInstance(ALGORITHM);
+		cipher.init(Cipher.DECRYPT_MODE, key);
+		byte[] decodedData = Base64.getDecoder().decode(encryptedData);
+		byte[] decryptedData = cipher.doFinal(decodedData);
+		return new String(decryptedData);
+	}
+
+	public String generateSecretKey() throws Exception {
+		KeyGenerator keyGen = KeyGenerator.getInstance(ALGORITHM);
+		keyGen.init(128); // for AES-128
+		SecretKey secretKey = keyGen.generateKey();
+		return Base64.getEncoder().encodeToString(secretKey.getEncoded());
+	}
 }

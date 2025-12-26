@@ -30,9 +30,16 @@ public class UserLoginBean {
     private String state;
     private String city;
     private String dateOfBirth;
+    private String loginId;
     
 //    private String passPortSizePhoto;
 
+	public String getLoginId() {
+		return loginId;
+	}
+	public void setLoginId(String loginId) {
+		this.loginId = loginId;
+	}
 	public String getDateOfBirth() {
 		return dateOfBirth;
 	}

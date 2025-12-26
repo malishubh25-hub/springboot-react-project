@@ -3,14 +3,14 @@ package com.baji.repositories;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
-import com.baji.entities.UserLogin;
+import com.baji.entities.BajiUserLogin;
 
 @Repository
-public interface UserLoginRepository extends JpaRepository<UserLogin, Long>{
+public interface UserDetailsRepository extends JpaRepository<BajiUserLogin, Long>{
 
 	boolean existsByCustomerNumber(String customerNumber);
     boolean existsByCustomerEmail(String customerEmail);
-	UserLogin findByCustomerNumber(String customerNumber);
-	UserLogin findByCustomerEmail(String customerEmail);
+    BajiUserLogin findByCustomerNumber(String customerNumber);
+    BajiUserLogin findByCustomerEmail(String customerEmail);
 
 }

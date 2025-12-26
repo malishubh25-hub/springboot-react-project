@@ -1,10 +1,5 @@
 package com.baji.entities;
 
-import java.sql.Timestamp;
-import java.time.LocalDateTime;
-
-import org.hibernate.annotations.CreationTimestamp;
-
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 
@@ -18,9 +13,9 @@ import lombok.Data;
 
 @Entity
 @Data
-@Table(name = "USER_LOGIN")
+@Table(name = "BAJI_USER_LOGIN")
 @JsonInclude(Include.NON_NULL)
-public class UserLogin {
+public class BajiUserLogin {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -32,6 +27,9 @@ public class UserLogin {
 
     @Column(name = "CUSTOMEREMAIL")
     private String customerEmail;
+    
+    @Column(name = "USERTYPE")
+    private String userType;
 
     @Column(name = "CUSTOMERNUMBER")
     private String customerNumber;
@@ -82,6 +80,13 @@ public class UserLogin {
     @Column(name = "DOB")
     private String dateOfBirthh;
     
+	public String getUserType() {
+		return userType;
+	}
+
+	public void setUserType(String userType) {
+		this.userType = userType;
+	}
 
 	public String getPassword() {
 		return password;

@@ -1,5 +1,8 @@
 package com.baji.utils;
 
+import java.io.IOException;
+import java.util.List;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -9,60 +12,58 @@ import org.springframework.security.web.authentication.WebAuthenticationDetailsS
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
-import com.baji.repositories.JwtTokenRepository;
+import com.baji.common.utils.OmsUtils;
+import com.baji.entities.BajiUsrLoginDetails;
+import com.baji.repositories.UserLoginDtlsRepository;
 
-import io.jsonwebtoken.io.IOException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import lombok.RequiredArgsConstructor;
 
 @Component
+@RequiredArgsConstructor
 public class JwtAuthFilter extends OncePerRequestFilter {
+	
+	@Autowired private JwtTokenUtil jwtUtil;
+	@Autowired UserLoginDtlsRepository userLoginRepository;
+	@Autowired private UserDetailsService userDetailsService;
 
-    @Autowired
-    private JwtTokenUtil jwtUtil;
+	@Override
+	protected void doFilterInternal(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse,
+			FilterChain filterChain) throws ServletException, IOException {
 
-    @Autowired
-    private UserDetailsService userDetailsService;
+		String authorizationHeader = httpServletRequest.getHeader("Authorization");
+		String token = null;
+		String userName = null;
 
-    @Autowired
-    private JwtTokenRepository tokenRepo;
+		if (authorizationHeader != null && authorizationHeader.startsWith("Bearer ")) {
+			token = authorizationHeader.substring(7);
+			userName = jwtUtil.getUsernameFromToken(token);
+		}
+		List<BajiUsrLoginDetails> loginDetails = userLoginRepository.findByUserLoginNumber(userName);
+		if (OmsUtils.isNotEmpty(loginDetails)) {
+			if (OmsUtils.isNotEmpty(loginDetails.get(0).getUserLoginToken())) {
+				if (userName != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+					UserDetails userDetails = userDetailsService.loadUserByUsername(userName);
 
-    @Override
-    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
-            throws ServletException, IOException, java.io.IOException {
-        
-        final String authHeader = request.getHeader("Authorization");
-        final String jwt;
-        final String username;
+					if (jwtUtil.validateTokenForUser(token, userDetails)) {
+						
+						UsernamePasswordAuthenticationToken usernamePasswordAuthenticationToken = new UsernamePasswordAuthenticationToken(
+								userDetails, null, userDetails.getAuthorities());
+						usernamePasswordAuthenticationToken
+								.setDetails(new WebAuthenticationDetailsSource().buildDetails(httpServletRequest));
+						SecurityContextHolder.getContext().setAuthentication(usernamePasswordAuthenticationToken);
 
-        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-            filterChain.doFilter(request, response);
-            return;
-        }
-
-        jwt = authHeader.substring(7);
-        username = jwtUtil.getUsernameFromToken(jwt);
-
-        if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-            UserDetails userDetails = userDetailsService.loadUserByUsername(username);
-
-//            boolean isTokenValid = jwtUtil.validateToken(jwt)
-//                    && tokenRepo.findByToken(jwt)
-//                        .map(t -> !t.isExpired() && !t.isRevoked())
-//                        .orElse(false);
-            boolean isTokenValid = false;
-
-            if (isTokenValid) {
-                UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
-                        userDetails, null, userDetails.getAuthorities());
-                authToken.setDetails(
-                        new WebAuthenticationDetailsSource().buildDetails(request)
-                );
-                SecurityContextHolder.getContext().setAuthentication(authToken);
-            }
-        }
-        filterChain.doFilter(request, response);
-    }
+					} else {
+						SecurityContextHolder.clearContext();
+						httpServletResponse.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+						return;
+					}
+				}
+			}
+		}
+		filterChain.doFilter(httpServletRequest, httpServletResponse);
+	}
 }
