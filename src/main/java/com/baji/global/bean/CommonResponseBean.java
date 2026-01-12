@@ -20,14 +20,6 @@ public class CommonResponseBean {
     private boolean success;
     private Object response;
 
-    public CommonResponseBean() {}
-
-    public CommonResponseBean(String message, boolean success, Object response) {
-        this.message = message;
-        this.success = success;
-        this.response = response;
-    }
-
     // Getters and Setters
     public String getMessage() { return message; }
     public void setMessage(String message) { this.message = message; }
